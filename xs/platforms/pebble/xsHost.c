@@ -52,7 +52,8 @@
 
 #include "applib/app_heap_util.h"
 #include "applib/app_logging.h"
-#include "services/evented_timer.h"
+#include "applib/app_timer.h"
+#include "syscall/syscall.h"
 #include "system/passert.h"
 
 #ifndef MODDEF_XS_MODS
@@ -276,13 +277,6 @@ static void cpuTimerHandler(nrf_timer_event_t event_type, void* p_context)
 /*
 	messages
 */
-#ifndef MODDEF_TASK_QUEUEWAIT
-	#ifdef mxDebug
-		#define MODDEF_TASK_QUEUEWAIT	(1000)
-	#else
-		#define MODDEF_TASK_QUEUEWAIT	(portMAX_DELAY)
-	#endif
-#endif
 typedef struct modMessageRecord modMessageRecord;
 typedef modMessageRecord *modMessage;
 
@@ -293,167 +287,75 @@ struct modMessageRecord {
 	uint16_t            length;
 };
 
+typedef struct {
+	xsMachine          *the;
+	modMessageDeliver   callback;
+	void               *refcon;
+	uint8_t            *message;
+	uint16_t            length;
+} ModMessageDescriptor;
+
+static void prv_mod_message_trampoline(void *desc_v)
+{
+	ModMessageDescriptor *d = desc_v;
+	(d->callback)(d->the, d->refcon, d->message, d->length);
+	if (d->message)
+		c_free(d->message);
+	c_free(d);
+}
+
 int modMessagePostToMachine(xsMachine *the, uint8_t *message, uint16_t messageLength, modMessageDeliver callback, void *refcon)
 {
-	modMessageRecord msg;
+	ModMessageDescriptor *desc = c_malloc(sizeof(ModMessageDescriptor));
+	if (!desc) return -1;
+
+	desc->the = the;
+	desc->callback = callback;
+	desc->refcon = refcon;
+	desc->length = messageLength;
 
 #ifdef mxDebug
-	if (0xffff == messageLength) {
-		msg.message = NULL;
-		msg.callback = callback;
-		msg.refcon = refcon;
-		msg.length = 0;
-		xQueueSendToBack(the->dbgQueue, &msg, portMAX_DELAY);
-		return 0;
-	}
+	// xsbug uses messageLength==0xffff as a sentinel for "debug command" and
+	// always passes message=NULL, so there's nothing to copy in that case.
+	if (0xffff == messageLength)
+		desc->message = NULL;
+	else
 #endif
-
 	if (message && messageLength) {
-		msg.message = c_malloc(messageLength);
-		if (!msg.message) return -1;
-
-		c_memmove(msg.message, message, messageLength);
+		desc->message = c_malloc(messageLength);
+		if (!desc->message) {
+			c_free(desc);
+			return -1;
+		}
+		c_memmove(desc->message, message, messageLength);
 	}
 	else
-		msg.message = NULL;
-	msg.length = messageLength;
-	msg.callback = callback;
-	msg.refcon = refcon;
+		desc->message = NULL;
 
-	if (pdTRUE == xQueueSendToBack(the->msgQueue, &msg, MODDEF_TASK_QUEUEWAIT))
-		return 0;
-
-	if (msg.message)
-		c_free(msg.message);
-
-	return -2;
+	sys_current_process_schedule_callback(prv_mod_message_trampoline, desc);
+	return 0;
 }
 
 int modMessagePostToMachineFromISR(xsMachine *the, modMessageDeliver callback, void *refcon)
 {
-	modMessageRecord msg;
-	portBASE_TYPE ignore;
-
-	msg.message = NULL;
-	msg.length = 0;
-	msg.callback = callback;
-	msg.refcon = refcon;
-
-	xQueueSendToBackFromISR(the->msgQueue, &msg, &ignore);
-
-	return 0;
+	// No in-tree caller. An ISR-safe unprivileged dispatch would need its
+	// own kernel primitive PebbleOS doesn't currently expose; returning
+	// failure means a future caller can't silently land on undefined
+	// behavior.
+	(void)the; (void)callback; (void)refcon;
+	return -2;
 }
 
 void modMessageService(xsMachine *the, int maxDelayMS)
 {
-#if 0	// MDK
-	modMessageRecord msg;
-
-#if !mxDebug
-	modWatchDogReset();
-	if (maxDelayMS >= NRFX_WDT_CONFIG_RELOAD_VALUE) {
-		#if NRFX_WDT_CONFIG_RELOAD_VALUE <= 1000
-			maxDelayMS = 500;
-		#else
-			maxDelayMS = NRFX_WDT_CONFIG_RELOAD_VALUE - 1000;
-		#endif
-	}
-#endif
-
-#ifdef mxDebug
-	while (true) {
-		QueueSetMemberHandle_t queue = xQueueSelectFromSet(the->queues, ((uint64_t)maxDelayMS << 10) / 1000);
-		if (!queue)
-			break;
-
-		if (!xQueueReceive(queue, &msg, 0))
-			break;
-
-		(msg.callback)(the, msg.refcon, msg.message, msg.length);
-		if (msg.message)
-			c_free(msg.message);
-
-		maxDelayMS = 0;
-	}
-#else
-	while (xQueueReceive(the->msgQueue, &msg, ((uint64_t)maxDelayMS << 10) / 1000)) {
-		(msg.callback)(the, msg.refcon, msg.message, msg.length);
-		if (msg.message)
-			c_free(msg.message);
-
-		maxDelayMS = 0;
-	}
-#endif
-
-	modWatchDogReset();
-#endif // MDK
+	// The app event loop already pumps PEBBLE_CALLBACK_EVENT — nothing to do.
+	(void)the; (void)maxDelayMS;
 }
 
-#ifndef modTaskGetCurrent
-	#error make sure MOD_TASKS and modTaskGetCurrent are defined
-#endif
-
-#ifndef MODDEF_TASK_QUEUELENGTH
-	#define MODDEF_TASK_QUEUELENGTH	(10)
-#endif
-
-#define kDebugQueueLength (4)
-
-static LightMutexHandle_t gFlashMutex = NULL;
-
-void modMachineTaskInit(xsMachine *the)
-{
-	if (NULL == gFlashMutex)
-		gFlashMutex = xLightMutexCreate();
-
-	the->task = (void *)modTaskGetCurrent();
-	the->msgQueue = xQueueCreate(MODDEF_TASK_QUEUELENGTH, sizeof(modMessageRecord));
-#ifdef mxDebug
-	the->dbgQueue = xQueueCreate(kDebugQueueLength, sizeof(modMessageRecord));
-
-	the->queues = xQueueCreateSet(MODDEF_TASK_QUEUELENGTH + kDebugQueueLength);
-	xQueueAddToSet(the->msgQueue, the->queues);
-	xQueueAddToSet(the->dbgQueue, the->queues);
-#endif
-}
-
-void modMachineTaskUninit(xsMachine *the)
-{
-	modMessageRecord msg;
-
-	if (the->msgQueue) {	
-		while (xQueueReceive(the->msgQueue, &msg, 0)) {
-			if (msg.message)
-				c_free(msg.message);
-		}
-
-#ifdef mxDebug
-		xQueueRemoveFromSet(the->msgQueue, the->queues);
-#endif
-		vQueueDelete(the->msgQueue);
-	}
-
-#ifdef mxDebug
-	if (the->dbgQueue) {
-		while (xQueueReceive(the->dbgQueue, &msg, 0))
-			;
-		xQueueRemoveFromSet(the->dbgQueue, the->queues);
-		vQueueDelete(the->dbgQueue);
-	}
-	if (the->queues)
-		vQueueDelete(the->queues);
-#endif
-}
-
-void modMachineTaskWait(xsMachine *the)
-{
-	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-}
-
-void modMachineTaskWake(xsMachine *the)
-{
-	xTaskNotifyGive(the->task);
-}
+void modMachineTaskInit(xsMachine *the) { (void)the; }
+void modMachineTaskUninit(xsMachine *the) { (void)the; }
+void modMachineTaskWait(xsMachine *the) { (void)the; }   // app event loop is the wait primitive
+void modMachineTaskWake(xsMachine *the) { (void)the; }   // wake is implicit in posting a PEBBLE_CALLBACK_EVENT
 
 /*
 	promises
@@ -466,7 +368,7 @@ static void doRunPromiseJobs(void *machine)
 
 void fxQueuePromiseJobs(txMachine* the)
 {
-  evented_timer_register(0, false, doRunPromiseJobs, the);
+  app_timer_register(0, doRunPromiseJobs, the);
 }
 
 /*
@@ -474,6 +376,8 @@ void fxQueuePromiseJobs(txMachine* the)
 */
 
 #if MODDEF_XS_MODS
+static LightMutexHandle_t gFlashMutex = NULL;
+
 static txBoolean spiRead(void *src, size_t offset, void *buffer, size_t size)
 {
 	return modSPIRead(offset + (uintptr_t)src - (uintptr_t)kFlashStart, size, buffer);

@@ -33,6 +33,7 @@
 
 #include "modInstrumentation.h"
 
+#include "applib/app_timer.h"
 #include "kernel/util/sleep.h"
 
 typedef struct modTimerRecord modTimerRecord;
@@ -61,8 +62,17 @@ static void modTimerEventedExecute(void *);
 static void modTimersScheduleNext(void)
 {
 	ModdablePebbleAppState state = (ModdablePebbleAppState)app_state_get_js_memory_api_context();
-	state->eventedTimer = evented_timer_register_or_reschedule(state->eventedTimer,
-		(uint32_t)modTimersNext(), modTimerEventedExecute, C_NULL);
+	uint32_t ms = (uint32_t)modTimersNext();
+
+	// Open-coded reschedule-or-register: app_timer.h doesn't expose a
+	// register_or_reschedule equivalent, so try reschedule first and fall
+	// back to register if the handle is stale or absent.
+	if (state->eventedTimer != EVENTED_TIMER_INVALID_ID
+		&& app_timer_reschedule((AppTimer *)state->eventedTimer, ms))
+		return;
+
+	state->eventedTimer = (EventedTimerID)(uintptr_t)
+		app_timer_register(ms, modTimerEventedExecute, C_NULL);
 }
 
 void modTimerEventedExecute(void *)
@@ -267,8 +277,8 @@ void modTimerRemove(modTimer timer)
 
 	if (state->timers)
 		modTimersScheduleNext();
-	else {
-		evented_timer_cancel(state->eventedTimer);
+	else if (state->eventedTimer != EVENTED_TIMER_INVALID_ID) {
+		app_timer_cancel((AppTimer *)state->eventedTimer);
 		state->eventedTimer = EVENTED_TIMER_INVALID_ID;
 	}
 }
@@ -287,6 +297,8 @@ void modTimerExit(void)
 		c_free(state->timers);
 		state->timers = next;
 	}
-	evented_timer_cancel(state->eventedTimer);
-	state->eventedTimer = EVENTED_TIMER_INVALID_ID;
+	if (state->eventedTimer != EVENTED_TIMER_INVALID_ID) {
+		app_timer_cancel((AppTimer *)state->eventedTimer);
+		state->eventedTimer = EVENTED_TIMER_INVALID_ID;
+	}
 }

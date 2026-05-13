@@ -131,11 +131,15 @@ extern int modTimersNext(void);
 
 /*
 	critical section
+
+	No-ops: on Pebble the modTimer list (the only consumer) is mutated only
+	on the app task — no ISR path. vPortEnterCritical/vPortExitCritical are
+	FreeRTOS PRIVILEGED_FUNCTIONs that would fault from unprivileged apps.
 */
 
 #define modCriticalSectionDeclare
-#define modCriticalSectionBegin()	vPortEnterCritical()
-#define modCriticalSectionEnd()		vPortExitCritical()
+#define modCriticalSectionBegin()	((void)0)
+#define modCriticalSectionEnd()		((void)0)
 
 /*
 	date and time
