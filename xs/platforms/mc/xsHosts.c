@@ -64,10 +64,16 @@ extern void *xsPreparationAndCreation(xsCreation **creation);
 
 #if pebble
 	static uint32_t kernelRemaining;
+	static uint8_t noKernelHeap;
 	#define machine_alloc(size, kind) \
 		(((size <= (txSize)kernelRemaining) && (kind <= 0)) ? (kernelRemaining -= size, kernel_malloc(size)) : app_malloc(size))
 	#define machine_free(ptr) \
 		(heap_contains_address(kernel_heap_get(), ptr) ? kernel_free(ptr) : app_free(ptr))
+
+void modMachineAllowKernelHeap(uint8_t allow)
+{
+	noKernelHeap = !allow;
+}
 #else
 	#define machine_alloc(size, kind) c_malloc(size)
 	#define machine_free(ptr) c_free(ptr)
@@ -519,11 +525,15 @@ txMachine *modCloneMachine(xsCreation *creationIn, const char *name)
 		name = ((txPreparation *)preparation)->main;
 
 #if pebble
-	kernelRemaining = 32 * 1024;
-	unsigned int used, free, max_free;
-	heap_calc_totals(kernel_heap_get(), &used, &free, &max_free);
-	if (max_free < kernelRemaining)
-		kernelRemaining = max_free;
+	if (noKernelHeap)
+		kernelRemaining = 0;
+	else {
+		kernelRemaining = 32 * 1024;
+		unsigned int used, free, max_free;
+		heap_calc_totals(kernel_heap_get(), &used, &free, &max_free);
+		if (max_free < kernelRemaining)
+			kernelRemaining = max_free;
+	}
 #endif
 
 	if (creation->staticSize) {

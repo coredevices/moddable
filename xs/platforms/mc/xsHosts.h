@@ -32,6 +32,11 @@ extern "C" {
 extern xsMachine *modCloneMachine(xsCreation *creation, const char *name);
 extern void modRunMachineSetup(xsMachine *the);
 
+// Pebble only. Whether modCloneMachine may place machine memory (static
+// block, slots) in the kernel heap. Disallow for machines whose memory user
+// code reads directly, e.g. FFI string/buffer handles. Default: allowed.
+extern void modMachineAllowKernelHeap(uint8_t allow);
+
 extern char *modGetModAtom(xsMachine *the, uint32_t atomTypeIn, int *atomSizeOut);
 
 extern void *modInstallMods(xsMachine *the, /* txPreparation */ void *preparation, uint8_t *status);
