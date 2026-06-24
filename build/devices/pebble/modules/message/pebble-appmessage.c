@@ -359,6 +359,10 @@ void xs_appmessage_get_output(xsMachine *the)
 
 void invokeUpdateActivate(void *context)
 {
+	// Stale evented-timer callback may fire in the error-dialog event loop after
+	// moddable_cleanup() tore down the JS context; bail rather than touch freed state.
+	if (NULL == app_state_get_js_memory_api_context())
+		return;
 	PebbleMessageState state = getModdableAppState(appMessage);
 
 	evented_timer_cancel(state->invokeUpdateActivate);
@@ -369,6 +373,10 @@ void invokeUpdateActivate(void *context)
 
 void invokeOnReadable(void *context)
 {
+	// Stale evented-timer callback may fire in the error-dialog event loop after
+	// moddable_cleanup() freed the XS machine; a NULL JS context means it's gone.
+	if (NULL == app_state_get_js_memory_api_context())
+		return;
 	PebbleMessage pm = context;
 
 	evented_timer_cancel(pm->readable);
@@ -382,6 +390,10 @@ void invokeOnReadable(void *context)
 
 void invokeOnWritable(void *context)
 {
+	// Stale evented-timer callback may fire in the error-dialog event loop after
+	// moddable_cleanup() freed the XS machine; a NULL JS context means it's gone.
+	if (NULL == app_state_get_js_memory_api_context())
+		return;
 	PebbleMessage pm = context;
 
 	if (C_NULL == pm->onWritable)
