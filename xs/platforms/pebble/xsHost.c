@@ -54,6 +54,7 @@
 #include "applib/app_logging.h"
 #include "services/evented_timer.h"
 #include "system/passert.h"
+#include "process_state/app_state/app_state.h"
 
 #ifndef MODDEF_XS_MODS
 	#define MODDEF_XS_MODS	0
@@ -247,6 +248,11 @@ void modMachineTaskWake(xsMachine *the)
 
 static void doRunPromiseJobs(void *machine)
 {
+	// This stale evented-timer callback can fire in the app's error-dialog event
+	// loop after moddable_cleanup() has freed the XS machine. A NULL JS context
+	// means cleanup already ran, so skip the use-after-free.
+	if (NULL == app_state_get_js_memory_api_context())
+		return;
 	fxRunPromiseJobs((txMachine *)machine);
 }
 
