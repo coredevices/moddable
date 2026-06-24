@@ -67,6 +67,12 @@ static void modTimersScheduleNext(void)
 
 void modTimerEventedExecute(void *)
 {
+	// moddable_cleanup() can run (tearing down the JS context) while a stale
+	// evented-timer event is still queued for the app's error-dialog event loop.
+	// A NULL context means cleanup already happened, so drop the callback rather
+	// than dereferencing freed app state.
+	if (NULL == app_state_get_js_memory_api_context())
+		return;
 	setModdableAppState(eventedTimer, EVENTED_TIMER_INVALID_ID);
 	modTimersExecute();
 	modTimersScheduleNext();
