@@ -156,7 +156,7 @@ extern uint32_t nrf52_milliseconds();
 #define delay(x)            nrf52_delay(x)
 
 #include "util/net.h"		// htonl, etc.
-//#include "system/logging.h"
+//#include <pbl/logging/logging.h>
 //#define modLog_transmit(s)	PBL_LOG_SYNC(LOG_LEVEL_ALWAYS, "%s", s)
 
 #ifndef mxFallThrough

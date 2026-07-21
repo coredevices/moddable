@@ -26,7 +26,7 @@
 #include "moddableAppState.h"
 
 #include "applib/app_logging.h"
-#include "kernel/logging_private.h"
+#include "logging/logging_private.h"
 #include "kernel/pbl_malloc.h"
 #include "mcu/privilege.h"
 #include "process_state/app_state/app_state.h"
