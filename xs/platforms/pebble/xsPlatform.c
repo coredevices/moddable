@@ -60,7 +60,7 @@
 #include "semphr.h"
 
 #include "applib/app_logging.h"
-#include "system/logging.h"
+#include <pbl/logging/logging.h>
 
 LightMutexHandle_t gDebugMutex;
 #define mxDebugMutexTake() xLightMutexLock(gDebugMutex, portMAX_DELAY)
