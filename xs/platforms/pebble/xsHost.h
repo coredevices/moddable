@@ -46,7 +46,7 @@
 #include "applib/graphics/gcontext.h"
 #include "applib/graphics/gtypes.h"
 #include "applib/pbl_std/pbl_std.h"
-#include "drivers/rtc.h"
+#include <pbl/drivers/rtc.h>
 #include "syscall/syscall.h"
 #include "system/passert.h"
 #include "util/time/time.h"
