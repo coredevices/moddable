@@ -49,8 +49,7 @@
 #include "pbl/services/comm_session/session_receive_router.h"
 #include "pbl/services/comm_session/session_send_buffer.h"
 #include "pbl/services/comm_session/session_send_queue.h"
-#include "drivers/task_watchdog.h"
-#include "drivers/watchdog.h"
+#include <pbl/drivers/task_watchdog.h>
 
 #include "xs.h"
 #include "xsHosts.h"
