@@ -53,9 +53,8 @@
 #include "kernel/pbl_malloc.h"
 
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
+#include <pbl/kernel/irq.h>
+#include <pbl/kernel/thread.h>
 
 
 #include "mc.defines.h"
@@ -123,8 +122,8 @@ extern void ESP_putc(int c);
 #define modMilliseconds() ((uint32_t)(rtc_get_ticks()))
 #define modMicroseconds() ((uint32_t)(rtc_get_ticks() * 1000))
 
-#define modDelayMilliseconds(ms) vTaskDelay(ms)
-#define modDelayMicroseconds(us) vTaskDelay(((us) + 500) / 1000)
+#define modDelayMilliseconds(ms) pbl_thread_sleep(PBL_MSEC(ms))
+#define modDelayMicroseconds(us) pbl_thread_sleep(PBL_MSEC(((us) + 500) / 1000))
 
 extern void modTimersExecute(void);
 extern int modTimersNext(void);
@@ -134,8 +133,8 @@ extern int modTimersNext(void);
 */
 
 #define modCriticalSectionDeclare
-#define modCriticalSectionBegin()	vPortEnterCritical()
-#define modCriticalSectionEnd()		vPortExitCritical()
+#define modCriticalSectionBegin()	pbl_irq_lock()
+#define modCriticalSectionEnd()		pbl_irq_unlock()
 
 /*
 	date and time
@@ -165,7 +164,6 @@ void xs_loop();
 void fxReceiveLoop(void);
 void setupDebugger(void);
 void flushDebugger(void);
-extern TaskHandle_t gMainTask;
 
 /*
 	messages
@@ -191,7 +189,7 @@ typedef void (*modMessageDeliver)(void *the, void *refcon, uint8_t *message, uin
 #endif
 
 #define MOD_TASKS (true)
-#define modTaskGetCurrent()		((uintptr_t)xTaskGetCurrentTaskHandle());
+#define modTaskGetCurrent()		((uintptr_t)pbl_thread_current())
 
 /* 
 	c libraries
