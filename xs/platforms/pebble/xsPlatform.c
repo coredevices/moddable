@@ -49,7 +49,7 @@
 #include "pbl/services/comm_session/session_receive_router.h"
 #include "pbl/services/comm_session/session_send_buffer.h"
 #include "pbl/services/comm_session/session_send_queue.h"
-#include <pbl/drivers/task_watchdog.h>
+#include <pbl/task_wdt/task_wdt.h>
 
 #include "xs.h"
 #include "xsHosts.h"
@@ -173,7 +173,7 @@ void fxReceive(txMachine* the)
 
 	DebugFragment f = state->debugFragments;
 	if (C_NULL == f) {
-		task_watchdog_pause(5);
+		pbl_task_wdt_suspend(5000);
 		pbl_thread_sleep(PBL_MSEC(10));					// 10 ms
 		return;
 	}
