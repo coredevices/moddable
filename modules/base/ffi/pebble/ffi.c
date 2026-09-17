@@ -31,7 +31,6 @@
 #include "mcu/privilege.h"
 #include "process_state/app_state/app_state.h"
 #include "syscall/syscall_internal.h"
-#include "util/attributes.h"
 
 // xs.h provides fxPop()/fxPush() macros that shadow the functions in xsffi.c;
 // we need the function symbols for the gxAPI table entries.
