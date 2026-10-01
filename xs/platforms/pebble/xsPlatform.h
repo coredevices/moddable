@@ -153,7 +153,9 @@ extern uint32_t nrf52_milliseconds();
 
 #define delay(x)            nrf52_delay(x)
 
-#include "util/net.h"		// htonl, etc.
+#include "pbl/util/byteorder.h"
+#define htonl(v) pbl_cpu_to_be32(v)
+#define ntohl(v) pbl_be32_to_cpu(v)
 //#include <pbl/logging/logging.h>
 //#define modLog_transmit(s)	PBL_LOG_SYNC(LOG_LEVEL_ALWAYS, "%s", s)
 
