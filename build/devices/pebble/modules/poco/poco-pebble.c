@@ -111,6 +111,13 @@ void xs_pocopebbble_drawText(xsMachine *the)
 {
 	const void *destructor = xsGetHostDestructor(xsArg(1));
 	if ((xs_pocopebble_Font_destructor != destructor) && (xs_pocopebble_Font_destructor_custom != destructor)) {
+		uint8_t *bytes;
+		xsUnsignedValue byteLength;
+
+		xsmcGetBufferReadable(xsArg(1), (void **)&bytes, &byteLength);
+		if ((byteLength >= 4) && ('B' == bytes[0]) && ('M' == bytes[1]) && ('F' == bytes[2]) && (4 == bytes[3]))
+			xsUnknownError("compressed font unsupported");
+
 		xs_poco_drawText(the);
 		return;
 	}
