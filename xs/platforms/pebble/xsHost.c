@@ -605,6 +605,8 @@ static const PebbleFontRecord gFonts[] = {
     {.family = "Leco-Bold", .size = 36, .res_key = FONT_KEY_LECO_36_BOLD_NUMBERS},
     {.family = "Leco-Bold", .size = 38, .res_key = FONT_KEY_LECO_38_BOLD_NUMBERS},
     {.family = "Leco-Regular", .size = 42, .res_key = FONT_KEY_LECO_42_NUMBERS},
+    {.family = "Leco-Regular", .size = 60, .res_key = FONT_KEY_LECO_60_NUMBERS_AM_PM},
+    {.family = "Leco-Bold", .size = 60, .res_key = FONT_KEY_LECO_60_BOLD_NUMBERS_AM_PM},
     {.family = "Leco-Light", .size = 28, .res_key = FONT_KEY_LECO_28_LIGHT_NUMBERS},
 
 	 {0}
