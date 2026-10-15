@@ -449,7 +449,7 @@ void messageReceived(DictionaryIterator *iterator, void *context)
 					xsmcSetInteger(xsVar(1), i);
 					} break;
 				default:
-					PBL_CROAK("unhandled type");
+					MODDABLE_FATAL("unhandled type");
 			}
 
 			if (kPKJSReadyMessage == t->key)
