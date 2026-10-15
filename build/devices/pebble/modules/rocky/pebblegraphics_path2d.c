@@ -21,7 +21,8 @@
 #include "pebblegraphics.h"
 #include "applib/graphics/gpath.h"
 #include "kernel/pbl_malloc.h"
-#include "system/passert.h"
+#include <pbl/kernel/assert.h>
+#include <pbl/kernel/fatal.h>
 
 #define MINIMUM_ARRAY_LEN (8)
 static void prv_try_allocate_steps(xsMachine *the, PebbleGraphicsContext pgr, const size_t num_steps_increment);
@@ -110,7 +111,7 @@ void pebble_graphics_context_stroke(xsMachine *the)
         break;
       }
       default:
-        WTF;
+        pbl_panic();
     }
   }
   #undef ASSIGN_P

@@ -26,7 +26,8 @@
 
 #include "process_state/app_state/app_state.h"
 #include <pbl/logging/logging.h>
-#include "system/passert.h"
+#include <pbl/kernel/assert.h>
+#include <pbl/kernel/fatal.h>
 
 #if !kPocoFrameBuffer
 	#error Poco frame buffer required on pebble
@@ -245,7 +246,7 @@ void PocoGrayBitmapDraw(Poco poco, PocoBitmap bits, PocoColor color, uint8_t ble
 		return;
 	}
 	
-	PBL_CROAK("unexpected PocoGrayBitmapDraw");
+	pbl_panic("unexpected PocoGrayBitmapDraw");
 }
 // bits is kCommodettoBitmapARGB2222 (GBitmapFormat8Bit)
 // mask is kCommodettoBitmapGray4 (GBitmapFormat2BitPalette with gBitmapGray4Palette)
@@ -338,7 +339,7 @@ void PocoBitmapPattern(Poco poco, PocoBitmap bits, PocoCoordinate x, PocoCoordin
 
 void PocoDrawFrame(Poco poco, uint8_t *data, uint32_t dataSize, PocoCoordinate x, PocoCoordinate y, PocoDimension w, PocoDimension h)
 {
-	PBL_CROAK("unexpected PocoDrawFrame");
+	pbl_panic("unexpected PocoDrawFrame");
 }
 
 
@@ -416,12 +417,12 @@ const uint8_t *PocoBMFGlyphFromUTF8(uint8_t **src, const uint8_t *chars, int cha
 
 void PocoDrawingBegin(Poco poco, PocoCoordinate x, PocoCoordinate y, PocoDimension w, PocoDimension h)
 {
-	PBL_CROAK("UNEXPECTED PocoDrawingBegin");
+	pbl_panic("UNEXPECTED PocoDrawingBegin");
 }
 
 int PocoDrawingEnd(Poco poco, PocoPixel *pixels, int byteLength, PocoRenderedPixelsReceiver pixelReceiver, void *refCon)
 {
-	PBL_CROAK("UNEXPECTED PocoDrawingEnd");
+	pbl_panic("UNEXPECTED PocoDrawingEnd");
 	return 0;
 }
 

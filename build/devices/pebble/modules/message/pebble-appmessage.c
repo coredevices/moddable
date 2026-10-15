@@ -30,6 +30,7 @@
 #include "services/evented_timer.h"
 #include "syscall/syscall.h"
 #include "applib/dict.h"
+#include <pbl/kernel/fatal.h>
 
 #define kPKJSReadyMessage (15025)
 
@@ -449,7 +450,7 @@ void messageReceived(DictionaryIterator *iterator, void *context)
 					xsmcSetInteger(xsVar(1), i);
 					} break;
 				default:
-					PBL_CROAK("unhandled type");
+					pbl_panic("unhandled type");
 			}
 
 			if (kPKJSReadyMessage == t->key)
