@@ -51,7 +51,6 @@
 #include "applib/app_heap_util.h"
 #include "applib/app_logging.h"
 #include "services/evented_timer.h"
-#include "system/passert.h"
 #include "process_state/app_state/app_state.h"
 
 #ifndef MODDEF_XS_MODS
