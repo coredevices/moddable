@@ -27,7 +27,7 @@
 
 #include "applib/app_logging.h"
 #include "logging/logging_private.h"
-#include "kernel/pbl_malloc.h"
+#include "applib/app_malloc.h"
 #include "mcu/privilege.h"
 #include "process_state/app_state/app_state.h"
 #include "syscall/syscall_internal.h"
@@ -154,7 +154,7 @@ void FFI_constructor(xsMachine* the)
 	// functions run via prv_ffi_shim → mcu_call_unprivileged). Allocate the
 	// table in task-scoped heap (unprivileged-readable); it's reclaimed when
 	// the task exits.
-	txAPI *api = task_zalloc(sizeof(txAPI));
+	txAPI *api = app_zalloc(sizeof(txAPI));
 	if (!api) {
 		xsResult = xsUndefined;
 		return;
