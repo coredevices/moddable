@@ -23,6 +23,8 @@
 #include "mc.xs.h"      // for xsID_ values
 #include "builtinCommon.h"
 
+#include <errno.h>
+
 #include <pbl/settings/settings.h>
 
 struct xsStorageIteratorRecord {
@@ -47,9 +49,9 @@ typedef struct xsDirectoryRecord *xsDirectory;
 
 #define throwIf(a) _throwIf(the, a)
 
-static void _throwIf(xsMachine *the, status_t err)
+static void _throwIf(xsMachine *the, int err)
 {
-	if (S_SUCCESS != err)
+	if (err)
 		xsUnknownError("key-value error");
 }
 
@@ -193,8 +195,8 @@ void xs_directorystorage_delete(xsMachine *the)
 	if (d->readOnly)
 		xsUnknownError("read-only");
 
-	status_t err = pbl_settings_delete(&d->file, key, c_strlen(key));
-	if (E_DOES_NOT_EXIST == err) err = S_SUCCESS;
+	int err = pbl_settings_delete(&d->file, key, c_strlen(key));
+	if (-ENOENT == err) err = 0;
 	throwIf(err);
 }
 
