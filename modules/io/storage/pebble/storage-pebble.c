@@ -62,7 +62,7 @@ static bool addOne(struct pbl_settings_file *file, struct pbl_settings_record *i
 	xsStorageIterator *head = context;
 	xsStorageIterator item = c_malloc(sizeof(xsStorageIteratorRecord) + info->key_len + 1);
 	item->next = *head;
-	info->get_key(file, item->key, info->key_len);
+	pbl_settings_read_key(file, item->key, info->key_len);
 	item->key[info->key_len] = 0;
 	*head = item;
 	return true;
