@@ -73,7 +73,7 @@ void xs_storageIterator_constructor(xsMachine *the)
 	xsDirectory d = xsmcGetHostChunkValidate(xsArg(0), xs_directorystorage_destructor);
 	xsStorageIterator iterator = C_NULL;
 
-	throwIf(settings_file_each(&d->file, addOne, &iterator));
+	settings_file_each(&d->file, addOne, &iterator);
 
 	xsmcSetHostData(xsThis, iterator);
 }
