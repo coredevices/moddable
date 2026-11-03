@@ -23,7 +23,7 @@
 #include "mc.xs.h"      // for xsID_ values
 #include "builtinCommon.h"
 
-#include <pbl/settings/settings_file.h>
+#include <pbl/settings/settings.h>
 
 struct xsStorageIteratorRecord {
 	struct xsStorageIteratorRecord *next;
@@ -33,7 +33,7 @@ typedef struct xsStorageIteratorRecord xsStorageIteratorRecord;
 typedef struct xsStorageIteratorRecord *xsStorageIterator;
 
 struct xsDirectoryRecord {
-	SettingsFile	file;
+	struct pbl_settings_file	file;
 	uint8_t			format;
 	uint8_t			readOnly:1;
 	uint8_t			isPebbleNative:1;		// no type information saved in entries
@@ -57,7 +57,7 @@ static void _throwIf(xsMachine *the, status_t err)
 	Storage Iterator
 */
 
-static bool addOne(SettingsFile *file, SettingsRecordInfo *info, void *context)
+static bool addOne(struct pbl_settings_file *file, struct pbl_settings_record *info, void *context)
 {
 	xsStorageIterator *head = context;
 	xsStorageIterator item = c_malloc(sizeof(xsStorageIteratorRecord) + info->key_len + 1);
@@ -73,7 +73,7 @@ void xs_storageIterator_constructor(xsMachine *the)
 	xsDirectory d = xsmcGetHostChunkValidate(xsArg(0), xs_directorystorage_destructor);
 	xsStorageIterator iterator = C_NULL;
 
-	settings_file_each(&d->file, addOne, &iterator);
+	pbl_settings_each(&d->file, addOne, &iterator);
 
 	xsmcSetHostData(xsThis, iterator);
 }
@@ -131,7 +131,7 @@ void xs_directorystorage_destructor(void *data)
 {
 	xsDirectory d = data;
 	if (d)
-		settings_file_close(&d->file);
+		pbl_settings_close(&d->file);
 }
 
 void xs_directorystorage_close(xsMachine *the)
@@ -178,7 +178,7 @@ void xs_directorystorage_open(xsMachine *the)
 	if ((kIOFormatInvalid == d.format) || ((kIOFormatBuffer != d.format) && d.isPebbleNative))
 		xsRangeError("unsupported");
 
-	throwIf(settings_file_open(&d.file, path, 8192));
+	throwIf(pbl_settings_open(&d.file, path, 8192));
 
 	xsResult = xsNewHostInstance(xsArg(1));
 	xsmcSetHostChunk(xsResult, &d, sizeof(d));
@@ -193,7 +193,7 @@ void xs_directorystorage_delete(xsMachine *the)
 	if (d->readOnly)
 		xsUnknownError("read-only");
 
-	status_t err = settings_file_delete(&d->file, key, c_strlen(key));
+	status_t err = pbl_settings_delete(&d->file, key, c_strlen(key));
 	if (E_DOES_NOT_EXIST == err) err = S_SUCCESS;
 	throwIf(err);
 }
@@ -206,19 +206,19 @@ void xs_directorystorage_read(xsMachine *the)
 	xsDirectory d = (xsDirectory)xsmcGetHostChunkValidate(xsThis, xs_directorystorage_destructor);
 	uint8_t format = d->format;
 
-	int size = settings_file_get_len(&d->file, key, c_strlen(key));
+	int size = pbl_settings_get_len(&d->file, key, c_strlen(key));
 	if (0 == size)
 		return;
 
 	if (d->isPebbleNative) {
 		void *buffer = xsmcSetArrayBuffer(xsResult, NULL, size);
 		d = (xsDirectory)xsmcGetHostChunk(xsThis);
-		throwIf(settings_file_get(&d->file, key, c_strlen(key), buffer, size));
+		throwIf(pbl_settings_get(&d->file, key, c_strlen(key), buffer, size));
 		return;
 	}
 
 	uint8_t *buffer = c_malloc(size + 1);		// xsTry / xsCatch to clean 
-	throwIf(settings_file_get(&d->file, key, c_strlen(key), buffer, size));
+	throwIf(pbl_settings_get(&d->file, key, c_strlen(key), buffer, size));
 	if (format != buffer[0]) {
 		c_free(buffer);
 		xsTypeError("mismatch");
@@ -270,7 +270,7 @@ void xs_directorystorage_write(xsMachine *the)
 		void *data;
 		xsUnsignedValue dataSize;
 		xsmcGetBufferReadable(xsArg(1), &data, &dataSize);
-		throwIf(settings_file_set(&d->file, key, c_strlen(key), data, dataSize));
+		throwIf(pbl_settings_set(&d->file, key, c_strlen(key), data, dataSize));
 		return;
 	}
 
@@ -290,7 +290,7 @@ void xs_directorystorage_write(xsMachine *the)
 			}
 			buf[0] = kIOFormatBuffer;
 			c_memmove(&buf[1], data, length);
-			err = settings_file_set(&d->file, key, c_strlen(key), buf, length + 1);
+			err = pbl_settings_set(&d->file, key, c_strlen(key), buf, length + 1);
 		} break;
 
 		case kIOFormatString: {
@@ -307,7 +307,7 @@ void xs_directorystorage_write(xsMachine *the)
 			buf[0] = kIOFormatString;
 			c_memmove(&buf[1], data, length);
 			d = (xsDirectory)xsmcGetHostChunkValidate(xsThis, xs_directorystorage_destructor);		// refresh as xsmcToString could move / close
-			err = settings_file_set(&d->file, key, c_strlen(key), buf, length + 1);
+			err = pbl_settings_set(&d->file, key, c_strlen(key), buf, length + 1);
 		} break;
 
 		default:
