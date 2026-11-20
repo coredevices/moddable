@@ -214,7 +214,7 @@ void xs_pocopebbble_drawCircle(xsMachine *the)
 			.size.w = radius << 1,
 			.size.h = radius << 1,
 		};
-		const int32_t inset_thickness = MAX(ABS(r.size.h), ABS(r.size.w));
+		const int32_t inset_thickness = PBL_MAX(PBL_ABS(r.size.h), PBL_ABS(r.size.w));
 		graphics_fill_radial(ctx, r, GOvalScaleModeFillCircle, inset_thickness, from, to);
 	ctx->draw_state.fill_color = saveColor;
 }
